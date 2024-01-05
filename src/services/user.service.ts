@@ -25,7 +25,7 @@ export const createUser = async (payload: CreateUser) => {
     });
   
     if (existingUser) {
-      throw new Error('User with this email already exists');
+      throw new ApiError(HttpStatus.NOT_FOUND, 'User with this email already exists');
     }
 
     // Hash the password before saving
@@ -43,7 +43,6 @@ export const createUser = async (payload: CreateUser) => {
 
 
 export const loginUser = async (payload: LoginUser) => {
-    try {
       const { email, password } = payload;
   
       // Check if the user with the given email exists
@@ -62,24 +61,17 @@ export const loginUser = async (payload: LoginUser) => {
       const passwordMatch = await comparePassword(password, user.password);
   
       if (!passwordMatch) {
-        throw new Error('Invalid email or password');
+        throw new ApiError(HttpStatus.UNAUTHORIZED, 'Email or password invalid');
       }
   
       // User authenticated, generate and return a JWT token
       const token = await signJWT({ email: user.email, _id: user.id });
       
       return { user, token };
-    } catch (error) {
-      console.error('Error:', error);
-      throw new Error('Internal Server Error');
-    } finally {
-        await closePrismaClient();
-      }
 };
 
 
 export const getUserById = async (userId: string) => {
-    try {
       const user = await prisma.user.findUnique({
         where: {
           id: userId,
@@ -87,15 +79,8 @@ export const getUserById = async (userId: string) => {
       });
   
       if (!user) {
-        throw new Error('User not found');
+        throw new ApiError(HttpStatus.NOT_FOUND, 'User not found');
       }
   
       return user;
-    } catch (error: any) {
-      console.error('Error:', error.message);
-      throw new Error('Internal Server Error');
-    } finally {
-      await prisma.$disconnect(); // Close the Prisma client
-    }
-  };
-  
+};

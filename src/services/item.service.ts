@@ -11,7 +11,6 @@ export const closePrismaClient = async () => {
 
 
 export const createItem = async (payload: CreateItem) => {
-  try {
     const { userId, title } = payload;
     // Check if the user with the given userId exists
     const user = await prisma.user.findUnique({
@@ -49,32 +48,15 @@ export const createItem = async (payload: CreateItem) => {
     });
 
     return newItem;
-  } catch (error) {
-    console.error('Error:', error);
-    throw new Error('Internal Server Error');
-  } finally {
-    await closePrismaClient();
-  }
+  
 };
 
-
-export const getItemsByUserId = async (userId: string) => {
+export const getItems = async () => {
   try {
-    // Check if the user with the given userId exists
-    const user = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-    });
-
-    if (!user) {
-      throw new ApiError(HttpStatus.NOT_FOUND, 'User not found');
-    }
-
-    // Get all items associated with the user
+    // Get all items 
     return prisma.item.findMany({
-      where: {
-        userId,
+      include: {
+        user: true,
       },
     });
   } catch (error) {
@@ -86,7 +68,6 @@ export const getItemsByUserId = async (userId: string) => {
 };
 
 export const getItemByUserId = async (userId: string, itemId: string) => {
-    try {
       // Check if the user with the given userId exists
       const user = await prisma.user.findUnique({
         where: {
@@ -104,16 +85,20 @@ export const getItemByUserId = async (userId: string, itemId: string) => {
             id: itemId,
         },
       });
-    } catch (error) {
-      console.error('Error:', error);
-      throw new Error('Internal Server Error');
-    } finally {
-      await closePrismaClient();
-    }
-  };
+};
 
 export const updateItem = async (itemId: string, payload: CreateItem) => {
-  try {
+    // Check if the item with the given itemId exists and is associated with the specified userId
+    const existingItem = await prisma.item.findUnique({
+      where: {
+        id: itemId,
+      },
+    });
+
+    if (!existingItem || existingItem.userId !== payload.userId) {
+      throw new ApiError(HttpStatus.NOT_FOUND, 'Item not found or Unauthorized');
+    }
+
     // Update the item with the given itemId
     return prisma.item.update({
       where: {
@@ -123,26 +108,24 @@ export const updateItem = async (itemId: string, payload: CreateItem) => {
         ...payload,
       },
     });
-  } catch (error) {
-    console.error('Error:', error);
-    throw new Error('Internal Server Error');
-  } finally {
-    await closePrismaClient();
-  }
 };
+  
+export const deleteItem = async (itemId: string, userId: string) => {
 
-export const deleteItem = async (itemId: string) => {
-  try {
+    const existingItem = await prisma.item.findUnique({
+      where: {
+        id: itemId,
+      },
+    });
+
+    if (!existingItem || existingItem.userId !== userId) {
+      throw new ApiError(HttpStatus.NOT_FOUND, 'Item not found or unauthorized');
+    }
     // Delete the item with the given itemId
     return prisma.item.delete({
       where: {
         id: itemId,
       },
     });
-  } catch (error) {
-    console.error('Error:', error);
-    throw new Error('Internal Server Error');
-  } finally {
-    await closePrismaClient();
-  }
+  
 };
